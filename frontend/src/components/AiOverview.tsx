@@ -5,20 +5,21 @@ import { useTheme } from '@mui/material/styles';
 
 interface AiOverviewProps {
   sensorName: string;
-  data: { time: number; value: number }[];
+  payload: any;
 }
 
-const AiOverview: React.FC<AiOverviewProps> = ({ sensorName, data }) => {
+const AiOverview: React.FC<AiOverviewProps> = ({ sensorName, payload }) => {
   const [overview, setOverview] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const theme = useTheme(); // Use theme for colors
+  const theme = useTheme();
 
   useEffect(() => {
-    // Only fetch if data is available and sensorName is not empty
-    if (sensorName && data && data.length > 0) {
+    // Only fetch if we have valid data
+    if (sensorName && payload) {
       setIsLoading(true);
       setOverview(''); // Clear previous overview
-      getAiOverview(sensorName, data)
+      
+      getAiOverview(sensorName, payload)
         .then((text) => {
           setOverview(text);
         })
@@ -29,24 +30,26 @@ const AiOverview: React.FC<AiOverviewProps> = ({ sensorName, data }) => {
         .finally(() => {
           setIsLoading(false);
         });
-    } else if (!sensorName && !data) {
-      // If modal opens but no sensor data is selected yet (e.g., loading states)
-      setOverview('');
-      setIsLoading(false);
     }
-  }, [sensorName, data]); // Re-run when data or sensorName changes
+  }, [sensorName, payload]); // Re-run when data changes
 
   return (
-    <Box> {/* Removed styling from here, parent SensorModal handles the box styling */}
+    <Box>
       {isLoading ? (
         <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-          <CircularProgress size={16} sx={{ mr: 1, color: theme.palette.primary.main }} />
+          <CircularProgress
+            size={16}
+            sx={{ mr: 1, color: theme.palette.primary.main }}
+          />
           <Typography variant="body2" color="text.secondary">
             Asking our AI assistant for a simple explanation...
           </Typography>
         </Box>
       ) : (
-        <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
+        <Typography
+          variant="body2"
+          sx={{ color: theme.palette.text.primary }}
+        >
           {overview}
         </Typography>
       )}
