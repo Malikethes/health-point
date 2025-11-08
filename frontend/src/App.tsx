@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Container,
   Typography,
@@ -319,6 +319,7 @@ function App() {
                   <HumanVisualization
                     onSensorClick={handleSensorClick}
                     overallStatus={overallStatus}
+                    subjectGender={subjectInfo?.gender}
                   />
                 </Box>
 

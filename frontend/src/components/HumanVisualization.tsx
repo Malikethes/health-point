@@ -7,39 +7,46 @@ import {
   IconButton,
 } from '@mui/material';
 
-// --- IMPORTANT ---
-// This is the path to your SVG file.
-// For this to work, place your SVG file in the `public` folder
-// at the root of your project.
-//
-// Example: /public/human-silhouette.svg
-//
-const HUMAN_SILHOUETTE_PATH = '/human-silhouette.svg';
+// --- IMAGE PATH LOGIC ---
+const getSilhouettePath = (gender: string | undefined | null): string => {
+  const safeGender = gender ? gender.toLowerCase() : 'default';
+
+  if (safeGender === 'female') {
+    return '/female-silhouette.png';
+  }
+  return '/male-silhouette.png';
+};
+// --- END IMAGE PATH LOGIC ---
 
 interface HumanVisualizationProps {
   onSensorClick: (sensorPointId: string) => void;
   overallStatus: { emoji: string; insight: string } | null;
+  // --- NEW PROP ---
+  subjectGender: string | undefined;
 }
 
 const HumanVisualization: React.FC<HumanVisualizationProps> = ({
   onSensorClick,
   overallStatus,
+  subjectGender,
 }) => {
   // These are now %-based positions.
   // YOU WILL NEED TO ADJUST THESE
   // to match the layout of *your* specific SVG image.
   const chestSensorPosition = { top: '25%', left: '50%' };
-  const handSensorPosition = { top: '50%', left: '40%' };
+  const handSensorPosition = { top: '50%', left: subjectGender === 'female' ? '42%' : '40%' };
+
+  // Calculate the dynamic path
+  const silhouettePath = getSilhouettePath(subjectGender);
 
   return (
     <Box
       sx={{
         width: '100%',
-        // maxWidth: 250, // <-- REMOVED
-        flexGrow: 1, // <-- ADDED: Will take up available vertical space
-        minHeight: 300, // <-- ADDED: Ensures a minimum height
-        height: '100%', // <-- ADDED
-        position: 'relative', // This is the container for absolute positioning
+        flexGrow: 1,
+        minHeight: 300,
+        height: '100%',
+        position: 'relative',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
@@ -49,21 +56,16 @@ const HumanVisualization: React.FC<HumanVisualizationProps> = ({
     >
       {/* 1. The Human Silhouette Image */}
       <img
-        src={HUMAN_SILHOUETTE_PATH}
-        alt="Human Silhouette"
+        src={silhouettePath} // <-- Dynamic path used here
+        alt={`${subjectGender || 'Default'} Human Silhouette`}
         style={{
-          width: 'auto', // <-- CHANGED
-          height: '100%', // <-- CHANGED
+          width: 'auto',
+          height: '100%',
           display: 'block',
-          objectFit: 'contain', // <-- ADDED
-          maxHeight: '450px', // <-- ADDED: Prevents it from getting too huge
-          // --- COLOR UPDATE ---
-          // This filter combination inverts the black to white,
-          // adds a sepia (brown/yellow) tint, then shifts the hue
-          // to be more skin-like, and boosts saturation.
-          filter:
-            'invert(1) sepia(1) saturate(1.8) hue-rotate(15deg) brightness(0.65)',
-          // --- END COLOR UPDATE ---
+          objectFit: 'contain',
+          maxHeight: '450px',
+          // Set to a dark grey/black for contrast
+          filter: 'invert(0.1) brightness(0.9) contrast(1.2)',
         }}
         // Handle image load error
         onError={(e) => {
@@ -75,9 +77,9 @@ const HumanVisualization: React.FC<HumanVisualizationProps> = ({
       <Box
         sx={{
           display: 'none', // Hidden by default
-          width: '100%', // <-- CHANGED
-          height: '100%', // <-- CHANGED
-          minHeight: 300, // <-- ADDED
+          width: '100%',
+          height: '100%',
+          minHeight: 300,
           border: '2px dashed #ccc',
           borderRadius: '8px',
           alignItems: 'center',
@@ -90,7 +92,7 @@ const HumanVisualization: React.FC<HumanVisualizationProps> = ({
         <Typography variant="body2">
           Image not found.
           <br />
-          Make sure `human-silhouette.svg` is in the `public` folder.
+          Make sure `{silhouettePath}` is in the `public` folder.
         </Typography>
       </Box>
 
@@ -108,12 +110,9 @@ const HumanVisualization: React.FC<HumanVisualizationProps> = ({
             '&:hover': {
               backgroundColor: 'rgba(255, 255, 255, 0.9)',
             },
-            // --- FIX: MAKE CIRCLE ---
-            width: 44, // Set fixed width
-            height: 44, // Set fixed height
-            borderRadius: '50%', // Make it a circle
-            // --- END FIX ---
-            // Pulsing animation
+            width: 44,
+            height: 44,
+            borderRadius: '50%',
             '@keyframes pulse': {
               '0%': { boxShadow: '0 0 0 0px rgba(59, 130, 246, 0.4)' },
               '100%': { boxShadow: '0 0 0 10px rgba(59, 130, 246, 0)' },
@@ -121,18 +120,16 @@ const HumanVisualization: React.FC<HumanVisualizationProps> = ({
             animation: 'pulse 2s infinite',
           }}
         >
-          {/* --- FIX: REMOVED NESTED TYPOGRAPHY --- */}
           <Typography
             sx={{
               fontWeight: 'bold',
               fontSize: '1.2rem',
               color: '#3b82f6',
-              lineHeight: 1, // Ensure it's centered
+              lineHeight: 1,
             }}
           >
             C
           </Typography>
-          {/* --- END FIX --- */}
         </IconButton>
       </Tooltip>
 
@@ -150,12 +147,9 @@ const HumanVisualization: React.FC<HumanVisualizationProps> = ({
             '&:hover': {
               backgroundColor: 'rgba(255, 255, 255, 0.9)',
             },
-            // --- FIX: MAKE CIRCLE ---
-            width: 44, // Set fixed width
-            height: 44, // Set fixed height
-            borderRadius: '50%', // Make it a circle
-            // --- END FIX ---
-            // Pulsing animation
+            width: 44,
+            height: 44,
+            borderRadius: '50%',
             '@keyframes pulseRed': {
               '0%': { boxShadow: '0 0 0 0px rgba(239, 68, 68, 0.4)' },
               '100%': { boxShadow: '0 0 0 10px rgba(239, 68, 68, 0)' },
@@ -163,18 +157,16 @@ const HumanVisualization: React.FC<HumanVisualizationProps> = ({
             animation: 'pulseRed 2s infinite',
           }}
         >
-          {/* --- FIX: REMOVED NESTED TYPOGRAPHY --- */}
           <Typography
             sx={{
               fontWeight: 'bold',
               fontSize: '1.2rem',
               color: '#ef4444',
-              lineHeight: 1, // Ensure it's centered
+              lineHeight: 1,
             }}
           >
             H
           </Typography>
-          {/* --- END FIX --- */}
         </IconButton>
       </Tooltip>
 
