@@ -2,6 +2,8 @@ import numpy as np
 from scipy.signal import butter, filtfilt, find_peaks
 from typing import Dict, List
 
+from services.pkl_loader import load_pkl, DEFAULT_FS
+
 BREATHING_BAND = [0.1, 0.5]
 RESP_FS = 700
 
@@ -43,10 +45,11 @@ def process_respiration_signal(
     total_samples = len(filtered_sig)
 
     rates = {}
-    
+
     if total_samples < step_samples:
         return {0.0: 0.0}
 
+    # safety: ensure integer stepping in seconds
     step_sec_safe = max(1, step_sec)
     for t_sec in range(step_sec_safe, int(total_samples / fs) + 1, step_sec_safe):
 
@@ -72,3 +75,53 @@ def process_respiration_signal(
         rates[float(t_sec)] = rate_bpm
 
     return rates
+
+
+def get_breathing_rate(subject: str, winsec: int = 5, step_sec: int = 5) -> Dict:
+    """
+    Load the subject pkl, extract chest RESP signal, compute breathing rates using
+    process_respiration_signal and return a JSON-serializable dict:
+    {
+      "x_label": "Time (s)",
+      "y_label": "Breathrate (BPM)",
+      "x_values": [...],
+      "y_values": [...]
+    }
+
+    Raises FileNotFoundError if subject file not found.
+    Raises KeyError if RESP signal not present.
+    """
+    path = f"data/WESAD/{subject}/{subject}.pkl"
+    obj = load_pkl(path)  # may raise FileNotFoundError upstream
+
+    chest_data = obj["signal"]["chest"]
+
+    resp_key = None
+    for key in chest_data.keys():
+        if key.upper() == "RESP":
+            resp_key = key
+            break
+
+    if resp_key is None:
+        raise KeyError("RESP key not found in chest data")
+
+    payload = chest_data[resp_key]
+
+    if isinstance(payload, dict) and "signal" in payload:
+        raw_signal = payload["signal"]
+        fs = payload.get("sampling_rate") or DEFAULT_FS.get("RESP", RESP_FS)
+    else:
+        raw_signal = payload
+        fs = DEFAULT_FS.get("RESP", RESP_FS)
+
+    rates_dict = process_respiration_signal(raw_signal, fs=fs, winsec=winsec, step_sec=step_sec)
+
+    x_values = list(rates_dict.keys())
+    y_values = list(rates_dict.values())
+
+    return {
+        "x_label": "Time (s)",
+        "y_label": "Breathrate (BPM)",
+        "x_values": x_values,
+        "y_values": y_values,
+    }

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Query
 from services.pkl_loader import load_pkl, list_signals, extract_series, DEFAULT_FS
 from services.overall_data.heart_rate import get_heart_rate
-from services.overall_data.breathing_rate import process_respiration_signal
-from services.overall_data.stress_level import get_stress_level 
+from services.overall_data.breathing_rate import get_breathing_rate
+from services.overall_data.stress_level import get_stress_level
 from services.overall_data.temperature import get_temperature
 
 from services.overall_data.pulse_transit_timg import process_pulse_transit_time
@@ -62,53 +62,15 @@ def heart_rate(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error computing heart rate: {e}")
 
+
 @router.get("/breathing_rate")
-def get_breathing_rate(
+def get_breathing_rate_endpoint(
     subject: str = Query("S2", description="Subject ID, e.g. S2"),
 ):
-    """
-    Calculates the breathing rate over time for a subject using a 5-second window.
-    Returns two arrays: {x_labels: [timestamps], y_labels: [rates_in_bpm]}
-    """
-    path = f"data/WESAD/{subject}/{subject}.pkl"
     try:
-        obj = load_pkl(path)
+        return get_breathing_rate(subject, winsec=5, step_sec=5)
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail=f"File not found: {path}")
-
-    try:
-        chest_data = obj["signal"]["chest"]
-
-        resp_key = None
-        for key in chest_data.keys():
-            if key.upper() == "RESP":
-                resp_key = key
-                break
-
-        if resp_key is None:
-            raise KeyError("RESP key not found in chest data")
-
-        payload = chest_data[resp_key]
-
-        if isinstance(payload, dict) and "signal" in payload:
-            raw_signal = payload["signal"]
-            fs = payload.get("sampling_rate") or DEFAULT_FS.get("RESP", 700)
-        else:
-            raw_signal = payload
-            fs = DEFAULT_FS.get("RESP", 700)
-
-        rates_dict = process_respiration_signal(raw_signal, fs=fs, winsec=5, step_sec=5)
-
-        x_values = list(rates_dict.keys())
-        y_values = list(rates_dict.values())
-
-        return {
-            "x_label": "Time (s)",
-            "y_label": "Breathrate (BPM)",
-            "x_vales": x_values,
-            "y_values": y_values,
-        }
-
+        raise HTTPException(status_code=404, detail=f"File not found: {subject}")
     except KeyError:
         raise HTTPException(
             status_code=400, detail="RESP signal not found in chest data."
@@ -118,6 +80,7 @@ def get_breathing_rate(
             status_code=500, detail=f"Error processing signal: {type(e).__name__}: {e}"
         )
 
+
 @router.get("/stress_level")
 def stress_level(
     subject: str = Query("S2", description="Subject ID, e.g. S2"),
@@ -126,10 +89,15 @@ def stress_level(
     try:
         return get_stress_level(subject, sensor)
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail=f"Subject file not found: {subject}")
+        raise HTTPException(
+            status_code=404, detail=f"Subject file not found: {subject}"
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error computing stress level: {e}")
-    
+        raise HTTPException(
+            status_code=500, detail=f"Error computing stress level: {e}"
+        )
+
+
 @router.get("/temperature")
 def temperature(
     subject: str = Query("S2", description="Subject ID, e.g. S2"),
@@ -139,7 +107,9 @@ def temperature(
     try:
         return get_temperature(subject, sensor, modality)
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail=f"Subject file not found: {subject}")
+        raise HTTPException(
+            status_code=404, detail=f"Subject file not found: {subject}"
+        )
     except KeyError as e:
         raise HTTPException(status_code=400, detail=f"Modality error: {e}")
     except Exception as e:
