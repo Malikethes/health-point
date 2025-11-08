@@ -144,7 +144,22 @@ def temperature(
         raise HTTPException(status_code=400, detail=f"Modality error: {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error computing temperature: {e}")
-
+    
+@router.get("/movement")
+def movement(
+    subject: str = Query("S2", description="Subject ID, e.g. S2"),
+    sensor: str = Query("wrist", description="wrist | chest"),
+    modality: str = Query("ACC", description="Accelerometer modality (ACC)"),
+):
+    from services.overall_data.movement import get_movement
+    try:
+        return get_movement(subject, sensor, modality)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Subject file not found: {subject}")
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid modality or sensor: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error computing movement: {e}")    
 
 @router.get("/pulse_transit_time")
 def get_pulse_transit_time(
