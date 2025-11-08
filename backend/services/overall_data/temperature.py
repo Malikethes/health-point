@@ -9,9 +9,15 @@ def compute_temperature(y_values, fs: float):
     times, vals = [], []
     for i in range(0, len(sig) - win + 1, win):
         window = sig[i : i + win]
-        times.append(i / fs)
+        times.append((i + win) / fs)
         vals.append(float(np.nanmean(window)))
-    return {"x_label" : "Time (s)", "y_label" : "Temperature (°C)", "x_values": times, "y_values": vals}
+
+    return {
+        "x_label" : "Time (s)",
+        "y_label" : "Temperature (°C)",
+        "x_values": times,
+        "y_values": vals
+    }
 
 def get_temperature(subject: str, sensor: str = "wrist", modality: str = "TEMP"):
     path = f"data/WESAD/{subject}/{subject}.pkl"

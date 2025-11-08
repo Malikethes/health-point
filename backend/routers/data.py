@@ -2,12 +2,9 @@ from fastapi import APIRouter, HTTPException, Query
 from services.pkl_loader import load_pkl, list_signals, extract_series, DEFAULT_FS
 from services.overall_data.heart_rate import get_heart_rate
 from services.overall_data.breathing_rate import process_respiration_signal
-<<<<<<< HEAD
 from services.overall_data.stress_level import get_stress_level 
-=======
 from services.overall_data.temperature import get_temperature
 
->>>>>>> 2de9567a2c56ec28e3036411853e27dca36c79e5
 
 router = APIRouter(prefix="/data", tags=["data"])
 
@@ -121,7 +118,6 @@ def get_breathing_rate(
             status_code=500, detail=f"Error processing signal: {type(e).__name__}: {e}"
         )
 
-<<<<<<< HEAD
 @router.get("/stress_level")
 def stress_level(
     subject: str = Query("S2", description="Subject ID, e.g. S2"),
@@ -133,7 +129,7 @@ def stress_level(
         raise HTTPException(status_code=404, detail=f"Subject file not found: {subject}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error computing stress level: {e}")
-=======
+    
 @router.get("/temperature")
 def temperature(
     subject: str = Query("S2", description="Subject ID, e.g. S2"),
@@ -149,4 +145,3 @@ def temperature(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error computing temperature: {e}")
 
->>>>>>> 2de9567a2c56ec28e3036411853e27dca36c79e5

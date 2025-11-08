@@ -5,10 +5,9 @@ from services.pkl_loader import load_pkl, extract_series
 def compute_heart_rate(y_values, fs: float, window_sec: float = 5.0):
     """
     Compute heart rate (BPM) from ECG or BVP values using peak detection.
-    Ensures the signal is 1D.
+    Each HR value is assigned to the **end of the window**.
     """
     signal = np.asarray(y_values)
-
     if signal.ndim > 1:
         signal = signal.flatten()
 
@@ -21,10 +20,15 @@ def compute_heart_rate(y_values, fs: float, window_sec: float = 5.0):
         if len(window_peaks) >= 2:
             duration = (window_peaks[-1] - window_peaks[0]) / fs
             hr = (len(window_peaks) - 1) / duration * 60.0
-            hr_times.append(i / fs)
+            hr_times.append((i + window) / fs) 
             hr_values.append(hr)
 
-    return {"x_label": "Time (s)", "y_label": "Heartrate (BPM)", "x_values": hr_times, "y_values": hr_values}
+    return {
+        "x_label": "Time (s)",
+        "y_label": "Heartrate (BPM)",
+        "x_values": hr_times,
+        "y_values": hr_values
+    }
 
 def get_heart_rate(subject: str, sensor: str = "chest", modality: str = "ECG"):
     path = f"data/WESAD/{subject}/{subject}.pkl"
