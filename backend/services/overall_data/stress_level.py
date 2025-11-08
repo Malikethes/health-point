@@ -26,11 +26,14 @@ def compute_stress_level(eda, hr, temp, fs: float = 4.0, window_sec: float = 5.0
     interaction = 0.10 * (hr_z * eda_rate_z)
     
     stress_raw = cardio_stress + eda_stress + temp_stress + interaction
+<<<<<<< HEAD
 
     smooth_window = int(fs * 10)  # 10 second smoothing window
     if smooth_window > 1:
         kernel = np.ones(smooth_window) / smooth_window
         stress_raw = np.convolve(stress_raw, kernel, mode='same')
+=======
+>>>>>>> 68e945e4c0eb1c264acab8c0468afea088acd5b0
 
     stress_index = 100 / (1 + np.exp(-stress_raw))
     stress_index = np.clip(stress_index, 0, 100)
