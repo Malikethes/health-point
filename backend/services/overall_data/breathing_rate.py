@@ -23,13 +23,15 @@ def process_respiration_signal(
     """
     Calculates the breathing rate over time from a raw respiration signal.
 
-    :param raw_signal: The raw signal array from the .pkl file.
-    :param fs: The sampling frequency of the signal (default: 700 Hz).
-    :param winsec: The duration of the analysis window (in seconds).
-    :param step_sec: The time to step forward for each new calculation (in seconds).
-    :return: A dictionary of {timestamp_in_sec: breathing_rate_in_bpm}.
+    Strategy:
+     - Filter the full signal
+     - Detect peaks once for the entire signal
+     - For each timestep (every step_sec seconds), compute rate from:
+         1) the mean inter-peak interval inside the window (preferred)
+         2) if only one peak inside window: estimate using nearest peak before+after
+         3) fallback: count-based estimate (num_peaks/window_duration * 60)
+    This gives fractional BPM values instead of only integer multiples produced by simple counting.
     """
-
     sig = np.array(raw_signal)
     sig = sig.flatten()
 
@@ -37,42 +39,80 @@ def process_respiration_signal(
         filtered_sig = _butter_bandpass_filter(
             sig, BREATHING_BAND[0], BREATHING_BAND[1], fs
         )
-    except ValueError as e:
+    except ValueError:
         return {0.0: 0.0}
 
-    win_samples = winsec * fs
-    step_samples = step_sec * fs
+    win_samples = int(winsec * fs)
+    step_samples = int(step_sec * fs)
     total_samples = len(filtered_sig)
 
-    rates = {}
+    rates: Dict[float, float] = {}
 
-    if total_samples < step_samples:
+    if total_samples < step_samples or total_samples == 0:
         return {0.0: 0.0}
 
-    # safety: ensure integer stepping in seconds
+    min_distance = max(1, int(fs * 0.5))
+    peaks, _ = find_peaks(filtered_sig, distance=min_distance)
+
+    peaks = np.array(peaks, dtype=int)
+
+    def rate_from_intervals(intervals_sec: np.ndarray) -> float:
+        if len(intervals_sec) == 0:
+            return 0.0
+        mean_interval = float(np.mean(intervals_sec))
+        if mean_interval <= 0:
+            return 0.0
+        return 60.0 / mean_interval
+
     step_sec_safe = max(1, step_sec)
-    for t_sec in range(step_sec_safe, int(total_samples / fs) + 1, step_sec_safe):
-
-        end_sample = t_sec * fs
+    last_t = int(total_samples / fs)
+    for t_sec in range(step_sec_safe, last_t + 1, step_sec_safe):
+        end_sample = int(t_sec * fs)
         start_sample = max(0, end_sample - win_samples)
+        window_duration_sec = (end_sample - start_sample) / fs if fs > 0 else 0
 
-        window = filtered_sig[start_sample:end_sample]
-
-        if window.size == 0:
+        if window_duration_sec <= 0:
             continue
-        peaks, _ = find_peaks(
-            window, height=0, distance=fs * 1.0
-        )
 
-        num_peaks = len(peaks)
-        window_duration_sec = (end_sample - start_sample) / fs
+        peaks_in_window = peaks[(peaks >= start_sample) & (peaks <= end_sample)]
 
-        if window_duration_sec == 0:
-            rate_bpm = 0.0
-        else:
-            rate_bpm = (num_peaks / window_duration_sec) * 60
+        rate_bpm = 0.0
 
-        rates[float(t_sec)] = rate_bpm
+        if len(peaks_in_window) >= 2:
+            diffs = np.diff(peaks_in_window).astype(float) / fs
+            rate_bpm = rate_from_intervals(diffs)
+        elif len(peaks_in_window) == 1:
+            single_peak = peaks_in_window[0]
+            idx = np.searchsorted(peaks, single_peak)
+
+            before_idx = idx - 1
+            after_idx = (
+                idx + 0
+            )
+
+            if before_idx >= 0 and (idx + 1) < len(peaks):
+                interval_sec = (peaks[idx + 1] - peaks[before_idx]) / fs
+                if interval_sec > 0:
+                    rate_bpm = 60.0 / interval_sec
+                else:
+                    rate_bpm = 0.0
+            else:
+                if before_idx >= 0:
+                    interval_sec = (single_peak - peaks[before_idx]) / fs
+                    if interval_sec > 0:
+                        rate_bpm = 60.0 / interval_sec
+                elif (idx + 1) < len(peaks):
+                    interval_sec = (peaks[idx + 1] - single_peak) / fs
+                    if interval_sec > 0:
+                        rate_bpm = 60.0 / interval_sec
+                else:
+                    rate_bpm = 0.0
+
+        if rate_bpm == 0.0:
+            num_peaks = len(peaks_in_window)
+            rate_bpm = (num_peaks / window_duration_sec) * 60.0
+
+        rates[float(t_sec)] = float(rate_bpm)
 
     return rates
 
@@ -92,7 +132,7 @@ def get_breathing_rate(subject: str, winsec: int = 5, step_sec: int = 5) -> Dict
     Raises KeyError if RESP signal not present.
     """
     path = f"data/WESAD/{subject}/{subject}.pkl"
-    obj = load_pkl(path)  # may raise FileNotFoundError upstream
+    obj = load_pkl(path)
 
     chest_data = obj["signal"]["chest"]
 
@@ -114,7 +154,9 @@ def get_breathing_rate(subject: str, winsec: int = 5, step_sec: int = 5) -> Dict
         raw_signal = payload
         fs = DEFAULT_FS.get("RESP", RESP_FS)
 
-    rates_dict = process_respiration_signal(raw_signal, fs=fs, winsec=winsec, step_sec=step_sec)
+    rates_dict = process_respiration_signal(
+        raw_signal, fs=fs, winsec=winsec, step_sec=step_sec
+    )
 
     x_values = list(rates_dict.keys())
     y_values = list(rates_dict.values())
