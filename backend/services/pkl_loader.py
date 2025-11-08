@@ -1,6 +1,8 @@
 import math, pickle, os
 from typing import Any, Dict, List, Optional
 import numpy as np
+from functools import lru_cache
+
 LABEL_FS = 700
 LABEL_MAP = {
     0: "transient",
@@ -22,6 +24,7 @@ DEFAULT_FS = {
     "EMG": 700,
 }
 WRIST_ACC_DIVISOR = 64
+@lru_cache(maxsize=16)
 def load_pkl(path: str) -> Dict[str, Any]:
     if not os.path.exists(path):
         raise FileNotFoundError(path)
