@@ -13,17 +13,16 @@ import PersonaSelection from './components/PersonaSelection';
 import TimeRangeSlider from './components/TimeRangeSlider';
 import StatusPanel from './components/StatusPanel';
 import SubjectInfoModal from './components/SubjectInfoModal';
-import AIVibesLoading from './components/AIVibesLoading'; // <-- NEW IMPORT
-// --- DATA IMPORTS ---
+import AIVibesLoading from './components/AIVibesLoading';
+import GeneralAiOverview from './components/GeneralAiOverview';
 import {
   fetchSensorPointData,
   getOverallStatusAI,
 } from './data/dataService';
 import { mockSensorPointDatabase } from './data/mockData';
-// --- TYPE IMPORTS ---
 import type { SummaryData } from './components/StatusPanel';
 import type { SensorData, SensorPointData } from './data/sensorData.types';
-import { fetchSubjectInfo, type SubjectInfo } from './services/apiService';
+import { fetchSubjectInfo, type SubjectInfo } from './services/apiService'; // <-- Import new type
 import { calculateSummary } from './utils/dataCalculator';
 
 // A simple, reassuring theme
@@ -73,9 +72,9 @@ const theme = createTheme({
 });
 
 // --- TIME CONFIG ---
-// We'll use the relative time from our (new) mock data
 const MASTER_START_TIME = 0;
-const MASTER_END_TIME = 3600; // 1 hour in seconds
+// --- REMOVED CRASHING CODE ---
+// const MASTER_END_TIME = ...
 // --- END TIME CONFIG ---
 
 function App() {
@@ -88,16 +87,21 @@ function App() {
   // State for all data (fetched once at load)
   const [allData, setAllData] = useState<SensorData[]>([]);
 
+  // --- TIME STATE FIX ---
+  // Default to 3600, will be updated after fetch
+  const [masterEndTime, setMasterEndTime] = useState(3600);
+  // --- END TIME STATE FIX ---
+
   // State for the time slider
   const [timeRange, setTimeRange] = useState<number[]>([
     MASTER_START_TIME,
-    MASTER_END_TIME,
+    masterEndTime, // Use state here
   ]);
 
   // State for the dataset selector
   const [selectedDataset, setSelectedDataset] = useState<string>('S2');
 
-  // State for the left panel summaries
+  // State for the left panel summaries (controlled by slider)
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
 
   // State for the emoji status
@@ -113,14 +117,16 @@ function App() {
   // --- END SUBJECT INFO STATE ---
 
   // --- DATA FETCHING (MAIN EFFECT) ---
-  // This effect handles the two-stage loading
   useEffect(() => {
     console.log(`Fetching data for dataset: ${selectedDataset}`);
     setIsSubjectInfoLoading(true); // Stage 1: Load essential info first
     setAllData([]); // Clear previous data
     setSummaryData(null);
     setOverallStatus(null);
-    
+    // Reset time slider to default
+    setTimeRange([MASTER_START_TIME, 3600]);
+    setMasterEndTime(3600);
+
     // Stage 1: Fetch essential info (must be fetched first for immediate use)
     const infoPromise = fetchSubjectInfo(selectedDataset);
 
@@ -143,6 +149,20 @@ function App() {
           ...handData.parameters,
         ];
         setAllData(allParams);
+
+        // --- THIS IS THE FIX ---
+        // Find the real max time from the fetched data
+        let maxTime = 3600; // Default
+        const hrData = allParams.find((p) => p.id === 'heart-rate');
+        if (hrData && hrData.payload.xAxis && hrData.payload.xAxis[0].data) {
+          const timeData = hrData.payload.xAxis[0].data;
+          if (timeData.length > 0) {
+            maxTime = timeData[timeData.length - 1];
+          }
+        }
+        setMasterEndTime(maxTime);
+        setTimeRange([MASTER_START_TIME, maxTime]); // Also reset the slider
+        // --- END FIX ---
       })
       .catch((err) => {
         console.error('Error fetching data:', err);
@@ -155,41 +175,77 @@ function App() {
       });
   }, [selectedDataset]);
 
-  // --- SUMMARY CALCULATION (UNCHANGED LOGIC) ---
+  // --- SUMMARY CALCULATION (FOR SLIDER) ---
   useMemo(() => {
     if (!allData || allData.length === 0) {
       setSummaryData(null);
       return;
     }
 
+    // Build the summary object for the left panel
     const newSummary: SummaryData = {
       'heart-rate': calculateSummary(
         allData.find((p) => p.id === 'heart-rate')!,
-        timeRange,
+        timeRange, // <-- Uses the slider's timeRange
       ),
       'breathing-rate': calculateSummary(
         allData.find((p) => p.id === 'breathing-rate')!,
-        timeRange,
+        timeRange, // <-- Uses the slider's timeRange
       ),
       'stress': calculateSummary(
         allData.find((p) => p.id === 'stress')!,
-        timeRange,
+        timeRange, // <-- Uses the slider's timeRange
       ),
       'activity': calculateSummary(
         allData.find((p) => p.id === 'activity')!,
-        timeRange,
+        timeRange, // <-- Uses the slider's timeRange
       ),
       'temperature': calculateSummary(
         allData.find((p) => p.id === 'temperature')!,
-        timeRange,
+        timeRange, // <-- Uses the slider's timeRange
       ),
     };
     setSummaryData(newSummary);
 
+    // Calculate the overall AI status emoji (also slider-dependent)
     getOverallStatusAI(allData, timeRange).then((status) => {
       setOverallStatus(status);
     });
   }, [allData, timeRange]);
+
+  // --- 2. NEW OVERALL SUMMARY CALCULATION (FOR GENERAL AI) ---
+  // This calculates the summary for the *entire* session, ignoring the slider.
+  const overallSummaryData = useMemo((): SummaryData | null => {
+    if (!allData || allData.length === 0) {
+      return null;
+    }
+
+    // Use the *new state variable* for the full time range
+    const fullTimeRange = [MASTER_START_TIME, masterEndTime];
+
+    return {
+      'heart-rate': calculateSummary(
+        allData.find((p) => p.id === 'heart-rate')!,
+        fullTimeRange, // <-- Uses MASTER time range
+      ),
+      'breathing-rate': calculateSummary(
+        allData.find((p) => p.id === 'breathing-rate')!,
+        fullTimeRange, // <-- Uses MASTER time range
+      ),
+      'stress': calculateSummary(
+        allData.find((p) => p.id === 'stress')!,
+        fullTimeRange, // <-- Uses MASTER time range
+      ),
+      'activity': calculateSummary(
+        allData.find((p) => p.id === 'activity')!,
+        fullTimeRange, // <-- Uses MASTER time range
+      ),
+      'temperature': calculateSummary(
+        allData.find((p) => p.id === 'temperature')!,
+        fullTimeRange, // <-- Uses MASTER time range
+      ),
+    };
+  }, [allData, masterEndTime]); // Re-runs when allData or masterEndTime changes
 
   // --- EVENT HANDLERS (UNCHANGED) ---
   const handleSensorClick = async (sensorPointId: string) => {
@@ -234,6 +290,7 @@ function App() {
         }}
       >
         <Container maxWidth="lg">
+          {/* Main Dashboard Card */}
           <Box
             sx={{
               backgroundColor: theme.palette.background.paper,
@@ -250,8 +307,8 @@ function App() {
               sx={{
                 p: 2,
                 borderBottom: `1px solid ${theme.palette.divider}`,
-                position: 'relative', // Context for loading overlay
-                zIndex: 2, // Ensure selector is above loading screen
+                position: 'relative',
+                zIndex: 2,
               }}
             >
               <PersonaSelection
@@ -267,22 +324,25 @@ function App() {
                 display: 'flex',
                 flexGrow: 1,
                 flexDirection: { xs: 'column', md: 'row' },
-                position: 'relative', // Context for AIVibesLoading
+                position: 'relative',
               }}
             >
-              {/* --- NEW: AI VIBES LOADING OVERLAY --- */}
               <AIVibesLoading isLoading={isAppLoading} />
-              {/* --- END NEW --- */}
 
               {/* Left Column (Status Panel) */}
               <Box
                 sx={{
                   width: { xs: '100%', md: '35%', lg: '30%' },
                   p: 3,
-                  borderRight: { xs: 'none', md: `1px solid ${theme.palette.divider}` },
-                  borderBottom: { xs: `1px solid ${theme.palette.divider}`, md: 'none' },
+                  borderRight: {
+                    xs: 'none',
+                    md: `1px solid ${theme.palette.divider}`,
+                  },
+                  borderBottom: {
+                    xs: `1px solid ${theme.palette.divider}`,
+                    md: 'none',
+                  },
                   flexShrink: 0,
-                  // Ensure panel is usable when loaded
                   pointerEvents: isAppLoading ? 'none' : 'auto',
                 }}
               >
@@ -297,14 +357,17 @@ function App() {
                   display: 'flex',
                   flexDirection: 'column',
                   minHeight: '400px',
-                  // Ensure panel is usable when loaded
                   pointerEvents: isAppLoading ? 'none' : 'auto',
                 }}
               >
                 <Typography variant="h6" component="h3">
                   Interactive Health Monitoring
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 2 }}
+                >
                   Click a sensor point to explore.
                 </Typography>
 
@@ -325,13 +388,25 @@ function App() {
 
                 <TimeRangeSlider
                   masterStart={MASTER_START_TIME}
-                  masterEnd={MASTER_END_TIME}
+                  masterEnd={masterEndTime} // <-- Use state variable
                   value={timeRange}
                   onChange={setTimeRange}
                 />
               </Box>
             </Box>
           </Box>
+
+          {/* This component will now *only* render after the main app 
+            and subject info have finished loading.
+          */}
+          {!isAppLoading && !isSubjectInfoLoading && subjectInfo && (
+            <GeneralAiOverview
+              overallSummary={overallSummaryData}
+              subjectInfo={subjectInfo}
+              // This prop is now redundant, but passing it doesn't hurt
+              isLoading={isAppLoading || isSubjectInfoLoading}
+            />
+          )}
         </Container>
 
         {/* Modal (sits outside the layout) */}
@@ -342,8 +417,8 @@ function App() {
           isLoading={modalLoading}
           timeRange={timeRange}
         />
-        
-        {/* Subject Info Modal (NEW) */}
+
+        {/* Subject Info Modal */}
         <SubjectInfoModal
           open={isInfoModalOpen}
           onClose={() => setIsInfoModalOpen(false)}

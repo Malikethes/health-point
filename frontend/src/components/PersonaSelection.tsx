@@ -14,6 +14,9 @@ import InfoIcon from '@mui/icons-material/InfoOutlined'; // Import Info Icon
 // Generate the dataset names from S2 to S17
 const datasetNames: string[] = [];
 for (let i = 2; i <= 17; i++) {
+  if (i == 12) {
+    continue;
+  }
   datasetNames.push(`S${i}`);
 }
 
