@@ -202,27 +202,27 @@ export const getOverallStatusAI = async (
   }
 
   // --- NEW MORE SENSITIVE LOGIC ---
-  if (avgHr > 95 || avgStress > 7) {
+  if (avgHr > 95 || avgStress > 70) {
     return {
       emoji: '😥',
       insight:
         'Stress and heart rate seem high in this period. Might be a good time for a short break!',
     };
   }
-  if (avgHr > 85 || avgStress > 5) {
+  if (avgHr > 85 || avgStress > 50) {
     return {
       emoji: '😟',
       insight:
         'Slightly elevated readings. Data suggests a moment of stress or activity.',
     };
   }
-  if (avgHr < 55 && avgStress < 2) {
+  if (avgHr < 55 && avgStress < 20) {
     return {
       emoji: '😴',
       insight: 'Very low activity. Data indicates a period of deep rest or calm.',
     };
   }
-  if (avgStress > 4) {
+  if (avgStress > 40) {
     return {
       emoji: '🤔',
       insight:
