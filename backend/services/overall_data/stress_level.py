@@ -3,12 +3,29 @@ from scipy.stats import zscore
 from services.pkl_loader import load_pkl, extract_series
 
 def compute_stress_level(eda, hr, temp, fs: float = 4.0, window_sec: float = 5.0):
-    # Z-score normalization [0 - average]
+    eda = np.asarray(eda).flatten()
+    hr = np.asarray(hr).flatten()
+    temp = np.asarray(temp).flatten()
+    
+    # Z-score normalization
     eda_z = zscore(eda)
     hr_z = zscore(hr) 
     temp_z = zscore(temp)
-
-    stress_raw = 0.5 * eda_z + 0.3 * hr_z - 0.2 * temp_z
+    
+    hr_diff = np.concatenate([[0], np.diff(hr)])
+    hr_var = np.sqrt(np.convolve(hr_diff**2, np.ones(int(fs*5))/int(fs*5), mode='same'))
+    hr_var_z = zscore(hr_var)
+    
+    eda_rate = np.concatenate([[0], np.diff(eda)])
+    eda_rate_z = zscore(np.abs(eda_rate))
+    
+    cardio_stress = 0.40 * hr_z - 0.20 * hr_var_z  
+    eda_stress = 0.20 * eda_rate_z + 0.05 * eda_z  
+    
+    temp_stress = -0.15 * temp_z
+    interaction = 0.10 * (hr_z * eda_rate_z)
+    
+    stress_raw = cardio_stress + eda_stress + temp_stress + interaction
 
     stress_index = 100 / (1 + np.exp(-stress_raw))
     stress_index = np.clip(stress_index, 0, 100)
