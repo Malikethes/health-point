@@ -118,6 +118,8 @@ function App() {
 
   // --- DATA FETCHING (MAIN EFFECT) ---
   useEffect(() => {
+    setIsAppLoading(true);
+
     console.log(`Fetching data for dataset: ${selectedDataset}`);
     setIsSubjectInfoLoading(true); // Stage 1: Load essential info first
     setAllData([]); // Clear previous data
@@ -136,7 +138,6 @@ function App() {
         setIsSubjectInfoLoading(false); // Stage 1 complete
 
         // Stage 2: Load heavy sensor data (starts only after info is ready)
-        setIsAppLoading(true);
 
         const chestPromise = fetchSensorPointData('chest', selectedDataset);
         const handPromise = fetchSensorPointData('hand', selectedDataset);
