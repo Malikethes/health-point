@@ -24,7 +24,7 @@ def compute_heart_rate(y_values, fs: float, window_sec: float = 5.0):
             hr_times.append(i / fs)
             hr_values.append(hr)
 
-    return {"x_values": hr_times, "y_values": hr_values, "unit": "bpm"}
+    return {"x_label": "Time (s)", "y_label": "Heartrate (BPM)", "x_values": hr_times, "y_values": hr_values}
 
 def get_heart_rate(subject: str, sensor: str = "chest", modality: str = "ECG"):
     path = f"data/WESAD/{subject}/{subject}.pkl"
