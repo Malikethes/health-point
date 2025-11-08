@@ -7,6 +7,7 @@ from services.overall_data.temperature import get_temperature
 from services.overall_data.pulse_transit_time import get_pulse_transit_time
 from services.overall_data.skin_conductance import get_skin_conductance
 from services.subject_info import load_subject_info
+from services.overall_data_analysis.health_analysis import get_comprehensive_health_analysis
 
 router = APIRouter(prefix="/data", tags=["data"])
 
@@ -178,3 +179,18 @@ def subject_info(
         return load_subject_info(subject)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Subject readme not found for {subject}")
+
+@router.get("/health_analysis")
+def health_analysis(
+    subject: str = Query("S2", description="Subject ID, e.g. S2"),
+):
+    try:
+        return get_comprehensive_health_analysis(subject)
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404, detail=f"Subject data not found: {subject}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Health analysis failed: {type(e).__name__}: {e}"
+        )
