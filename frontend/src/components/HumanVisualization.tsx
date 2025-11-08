@@ -1,168 +1,218 @@
-import React, { useState } from 'react';
-import { Box } from '@mui/material'; // We still use Box for layout
+import React from 'react';
+import {
+  Box,
+  Tooltip,
+  Typography,
+  CircularProgress,
+  IconButton,
+} from '@mui/material';
 
-// We'll use the sensor data structure from your Figma code,
-// as it's perfect for this (x, y, color, etc.)
-// These IDs (e.g., 'heart-rate') will be passed to our dataService.
-const SENSOR_POINTS = [
-  {
-    id: 'heart-rate',
-    name: 'Heart Rate',
-    x: 200,
-    y: 180,
-    color: '#ef4444',
-  },
-  {
-    id: 'temperature',
-    name: 'Body Temperature',
-    x: 200,
-    y: 80,
-    color: '#f59e0b',
-  },
-  {
-    id: 'blood-pressure',
-    name: 'Blood Pressure',
-    x: 240,
-    y: 170,
-    color: '#3b82f6',
-  },
-  {
-    id: 'oxygen',
-    name: 'Oxygen Saturation',
-    x: 160,
-    y: 170,
-    color: '#06b6d4',
-  },
-  {
-    id: 'steps', // Mapped to 'activity'
-    name: 'Activity (Steps)',
-    x: 200,
-    y: 360,
-    color: '#8b5cf6',
-  },
-  {
-    id: 'sleep',
-    name: 'Sleep Quality',
-    x: 200,
-    y: 50, // Slightly different from 'temperature' y
-    color: '#6366f1',
-  },
-  {
-    id: 'respiratory-rate',
-    name: 'Respiratory Rate',
-    x: 160,
-    y: 200,
-    color: '#10b981',
-  },
-  {
-    id: 'hydration',
-    name: 'Hydration Level',
-    x: 240,
-    y: 200,
-    color: '#14b8a6',
-  },
-];
+// --- IMPORTANT ---
+// This is the path to your SVG file.
+// For this to work, place your SVG file in the `public` folder
+// at the root of your project.
+//
+// Example: /public/human-silhouette.svg
+//
+const HUMAN_SILHOUETTE_PATH = '/human-silhouette.svg';
 
 interface HumanVisualizationProps {
-  onSensorClick: (sensorId: string) => void;
+  onSensorClick: (sensorPointId: string) => void;
+  overallStatus: { emoji: string; insight: string } | null;
 }
 
 const HumanVisualization: React.FC<HumanVisualizationProps> = ({
   onSensorClick,
+  overallStatus,
 }) => {
-  const [hoveredSensor, setHoveredSensor] = useState<string | null>(null);
+  // These are now %-based positions.
+  // YOU WILL NEED TO ADJUST THESE
+  // to match the layout of *your* specific SVG image.
+  const chestSensorPosition = { top: '25%', left: '50%' };
+  const handSensorPosition = { top: '50%', left: '40%' };
 
   return (
     <Box
       sx={{
         width: '100%',
-        maxWidth: '400px', // Set max width for the SVG
-        margin: '2rem auto',
-        position: 'relative',
+        // maxWidth: 250, // <-- REMOVED
+        flexGrow: 1, // <-- ADDED: Will take up available vertical space
+        minHeight: 300, // <-- ADDED: Ensures a minimum height
+        height: '100%', // <-- ADDED
+        position: 'relative', // This is the container for absolute positioning
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
+        mb: 2,
+        mt: { xs: 2, md: 0 },
       }}
     >
-      <svg
-        width="400"
-        height="500"
-        viewBox="0 0 400 500"
-        style={{ maxWidth: '100%', height: 'auto' }}
+      {/* 1. The Human Silhouette Image */}
+      <img
+        src={HUMAN_SILHOUETTE_PATH}
+        alt="Human Silhouette"
+        style={{
+          width: 'auto', // <-- CHANGED
+          height: '100%', // <-- CHANGED
+          display: 'block',
+          objectFit: 'contain', // <-- ADDED
+          maxHeight: '450px', // <-- ADDED: Prevents it from getting too huge
+          // --- COLOR UPDATE ---
+          // This filter combination inverts the black to white,
+          // adds a sepia (brown/yellow) tint, then shifts the hue
+          // to be more skin-like, and boosts saturation.
+          filter:
+            'invert(1) sepia(1) saturate(1.8) hue-rotate(15deg) brightness(0.65)',
+          // --- END COLOR UPDATE ---
+        }}
+        // Handle image load error
+        onError={(e) => {
+          (e.currentTarget as HTMLImageElement).style.display = 'none';
+          (e.currentTarget.nextSibling as HTMLElement).style.display = 'block';
+        }}
+      />
+      {/* Fallback box in case image fails to load */}
+      <Box
+        sx={{
+          display: 'none', // Hidden by default
+          width: '100%', // <-- CHANGED
+          height: '100%', // <-- CHANGED
+          minHeight: 300, // <-- ADDED
+          border: '2px dashed #ccc',
+          borderRadius: '8px',
+          alignItems: 'center',
+          justifyContent: 'center',
+          textAlign: 'center',
+          p: 2,
+          color: 'text.secondary',
+        }}
       >
-        {/* Human Body Outline - from your code */}
-        <g stroke="#94a3b8" strokeWidth="2" fill="none">
-          {/* Head */}
-          <circle cx="200" cy="60" r="35" />
+        <Typography variant="body2">
+          Image not found.
+          <br />
+          Make sure `human-silhouette.svg` is in the `public` folder.
+        </Typography>
+      </Box>
 
-          {/* Neck */}
-          <line x1="200" y1="95" x2="200" y2="120" />
+      {/* 2. Sensor Point 1: Chest */}
+      <Tooltip title="Chest Sensors" arrow>
+        <IconButton
+          onClick={() => onSensorClick('chest')}
+          sx={{
+            position: 'absolute',
+            top: chestSensorPosition.top,
+            left: chestSensorPosition.left,
+            transform: 'translate(-50%, -50%)',
+            color: '#3b82f6', // Blue
+            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            },
+            // --- FIX: MAKE CIRCLE ---
+            width: 44, // Set fixed width
+            height: 44, // Set fixed height
+            borderRadius: '50%', // Make it a circle
+            // --- END FIX ---
+            // Pulsing animation
+            '@keyframes pulse': {
+              '0%': { boxShadow: '0 0 0 0px rgba(59, 130, 246, 0.4)' },
+              '100%': { boxShadow: '0 0 0 10px rgba(59, 130, 246, 0)' },
+            },
+            animation: 'pulse 2s infinite',
+          }}
+        >
+          {/* --- FIX: REMOVED NESTED TYPOGRAPHY --- */}
+          <Typography
+            sx={{
+              fontWeight: 'bold',
+              fontSize: '1.2rem',
+              color: '#3b82f6',
+              lineHeight: 1, // Ensure it's centered
+            }}
+          >
+            C
+          </Typography>
+          {/* --- END FIX --- */}
+        </IconButton>
+      </Tooltip>
 
-          {/* Torso */}
-          <path d="M 200 120 L 160 130 L 150 200 L 155 280 L 175 320 L 200 320 L 225 320 L 245 280 L 250 200 L 240 130 Z" />
+      {/* 3. Sensor Point 2: Hand */}
+      <Tooltip title="Hand Sensor" arrow>
+        <IconButton
+          onClick={() => onSensorClick('hand')}
+          sx={{
+            position: 'absolute',
+            top: handSensorPosition.top,
+            left: handSensorPosition.left,
+            transform: 'translate(-50%, -50%)',
+            color: '#ef4444', // Red
+            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            },
+            // --- FIX: MAKE CIRCLE ---
+            width: 44, // Set fixed width
+            height: 44, // Set fixed height
+            borderRadius: '50%', // Make it a circle
+            // --- END FIX ---
+            // Pulsing animation
+            '@keyframes pulseRed': {
+              '0%': { boxShadow: '0 0 0 0px rgba(239, 68, 68, 0.4)' },
+              '100%': { boxShadow: '0 0 0 10px rgba(239, 68, 68, 0)' },
+            },
+            animation: 'pulseRed 2s infinite',
+          }}
+        >
+          {/* --- FIX: REMOVED NESTED TYPOGRAPHY --- */}
+          <Typography
+            sx={{
+              fontWeight: 'bold',
+              fontSize: '1.2rem',
+              color: '#ef4444',
+              lineHeight: 1, // Ensure it's centered
+            }}
+          >
+            H
+          </Typography>
+          {/* --- END FIX --- */}
+        </IconButton>
+      </Tooltip>
 
-          {/* Arms */}
-          <path d="M 160 130 L 120 150 L 100 240" strokeLinecap="round" />
-          <path d="M 240 130 L 280 150 L 300 240" strokeLinecap="round" />
-
-          {/* Legs */}
-          <path d="M 175 320 L 170 400 L 175 480" strokeLinecap="round" />
-          <path d="M 225 320 L 230 400 L 225 480" strokeLinecap="round" />
-        </g>
-
-        {/* Clickable Health Metric Points - from your code */}
-        {SENSOR_POINTS.map((sensor) => (
-          <g key={sensor.id}>
-            <circle
-              cx={sensor.x}
-              cy={sensor.y}
-              r={hoveredSensor === sensor.id ? 16 : 12}
-              fill={sensor.color}
-              opacity={hoveredSensor === sensor.id ? 1 : 0.8}
-              onClick={() => onSensorClick(sensor.id)}
-              onMouseEnter={() => setHoveredSensor(sensor.id)}
-              onMouseLeave={() => setHoveredSensor(null)}
-              style={{
-                cursor: 'pointer',
-                transition: 'r 0.2s ease-out, opacity 0.2s ease-out',
-              }}
-            />
-            {/* Inner white circle for style */}
-            <circle
-              cx={sensor.x}
-              cy={sensor.y}
-              r={6}
-              fill="white"
-              style={{ pointerEvents: 'none' }} // Makes it non-interactive
-            />
-
-            {/* Hover tooltip text (from your code) */}
-            {hoveredSensor === sensor.id && (
-              <g style={{ pointerEvents: 'none' }}>
-                <rect
-                  x={sensor.x - 60}
-                  y={sensor.y - 40}
-                  width="120"
-                  height="28"
-                  fill="white"
-                  stroke={sensor.color}
-                  strokeWidth="2"
-                  rx="4"
-                />
-                <text
-                  x={sensor.x}
-                  y={sensor.y - 22}
-                  textAnchor="middle"
-                  fill="#1e293b"
-                  style={{ fontSize: '14px', fontWeight: 500 }}
-                >
-                  {sensor.name}
-                </text>
-              </g>
-            )}
-          </g>
-        ))}
-      </svg>
+      {/* 4. Overall Status Emoji & Tooltip */}
+      {overallStatus ? (
+        <Tooltip
+          title={
+            <Typography variant="body2" sx={{ p: 0.5 }}>
+              {overallStatus.insight}
+            </Typography>
+          }
+          arrow
+          placement="right"
+        >
+          <Typography
+            sx={{
+              position: 'absolute',
+              top: '10%',
+              right: '40%', // Adjust as needed
+              fontSize: '2.5rem',
+              cursor: 'help',
+              transform: 'translate(50%, -50%)',
+            }}
+          >
+            {overallStatus.emoji}
+          </Typography>
+        </Tooltip>
+      ) : (
+        <CircularProgress
+          size={30}
+          sx={{
+            position: 'absolute',
+            top: '10%',
+            right: '0%',
+            transform: 'translate(50%, -50%)',
+          }}
+        />
+      )}
     </Box>
   );
 };

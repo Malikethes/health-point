@@ -1,24 +1,31 @@
 import React from 'react';
+import { Box, Typography } from '@mui/material';
 import { BarChart } from '@mui/x-charts/BarChart';
-import { Box } from '@mui/material';
+import { formatSeconds } from '../../utils/formatters'; // Import our new helper
 
 interface BarChartVizProps {
   payload: {
-    series: any[];
-    xAxis: any[];
-    yAxis?: any[];
+    series: { data: number[]; label: string }[];
+    xAxis: { data: number[]; scaleType: 'linear' | 'band' }[];
   };
 }
 
 const BarChartViz: React.FC<BarChartVizProps> = ({ payload }) => {
+  if (!payload || !payload.series || !payload.xAxis) {
+    return <Typography>Invalid data for Bar Chart</Typography>;
+  }
+
   return (
-    <Box sx={{ height: 250, width: '100%', mt: 2 }}>
+    <Box sx={{ height: 300, width: '100%' }}>
       <BarChart
-        xAxis={payload.xAxis}
-        yAxis={payload.yAxis}
-        series={payload.series}
-        grid={{ vertical: true, horizontal: true }}
-        margin={{ top: 20, right: 30, left: 60, bottom: 30 }}
+        {...payload} // Spread the original payload
+        // Override xAxis to add our value formatter
+        xAxis={[
+          {
+            ...payload.xAxis[0],
+            valueFormatter: (seconds: number) => formatSeconds(seconds as number),
+          },
+        ]}
       />
     </Box>
   );

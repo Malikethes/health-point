@@ -1,99 +1,87 @@
 import React from 'react';
-import { Box, Card, CardActionArea, Typography } from '@mui/material';
-// Notice: No more 'Grid' import. We don't need it.
-import FlashOnIcon from '@mui/icons-material/FlashOn';
-import WorkIcon from '@mui/icons-material/Work';
-import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
-import PersonIcon from '@mui/icons-material/Person';
-import { useTheme } from '@mui/material/styles';
+import {
+  FormControl,
+  Select,
+  MenuItem,
+  InputLabel,
+  Box,
+  IconButton,
+  Tooltip, // Import IconButton
+} from '@mui/material';
+import { type SelectChangeEvent } from '@mui/material/Select';
+import InfoIcon from '@mui/icons-material/InfoOutlined'; // Import Info Icon
 
-interface Persona {
-  id: string;
-  name: string;
-  icon: React.ReactElement;
-  color: string; // To match Figma's icon colors
+// Generate the dataset names from S2 to S17
+const datasetNames: string[] = [];
+for (let i = 2; i <= 17; i++) {
+  datasetNames.push(`S${i}`);
 }
 
-const PERSONAS: Persona[] = [
-  { id: 'Athlete', name: 'Athlete', icon: <FlashOnIcon />, color: '#007AFF' },
-  { id: 'Professional', name: 'Professional', icon: <WorkIcon />, color: '#8E24AA' },
-  { id: 'Senior', name: 'Senior', icon: <FavoriteBorderIcon />, color: '#4CAF50' },
-  { id: 'General', name: 'General', icon: <PersonIcon />, color: '#FFA726' },
-];
-
 interface PersonaSelectionProps {
-  selectedPersona: string;
-  onSelectPersona: (personaId: string) => void;
+  selectedDataset: string;
+  onSelectDataset: (datasetId: string) => void;
+  // NEW: Prop to open the info modal
+  onOpenInfo: () => void;
 }
 
 const PersonaSelection: React.FC<PersonaSelectionProps> = ({
-  selectedPersona,
-  onSelectPersona,
+  selectedDataset,
+  onSelectDataset,
+  onOpenInfo, // Use the new prop
 }) => {
-  const theme = useTheme();
+  const handleChange = (event: SelectChangeEvent) => {
+    onSelectDataset(event.target.value as string);
+  };
 
   return (
-    // We replace the <Grid container> with a <Box>
-    <Box
-      sx={{
-        mb: 4,
-        display: 'grid', // Use CSS Grid
-        gap: 2, // This replaces the <Grid spacing={2}>
-        // This defines our responsive columns.
-        // 1 column on 'xs' (mobile)
-        // 2 columns on 'sm' (tablet)
-        // 4 columns on 'md' (desktop)
-        gridTemplateColumns: {
-          xs: 'repeat(1, 1fr)',
-          sm: 'repeat(2, 1fr)',
-          md: 'repeat(4, 1fr)',
-        },
-      }}
-    >
-      {/* We no longer need the <Grid item> wrapper at all. */}
-      {PERSONAS.map((persona) => (
-        <Card
-          key={persona.id} // Put the key on the Card now
+    <Box sx={{ display: 'flex', alignItems: 'flex-end', mb: 3 }}>
+      <FormControl
+        size="small"
+        sx={{ minWidth: 200, flexGrow: 0 }}
+      >
+        <InputLabel id="dataset-selector-label">
+          Dataset ID
+        </InputLabel>
+        <Select
+          labelId="dataset-selector-label"
+          value={selectedDataset}
+          label="Dataset ID"
+          onChange={handleChange}
           sx={{
-            border: 2,
-            borderColor:
-              selectedPersona === persona.id
-                ? persona.color // Highlight selected
-                : 'transparent',
-            boxShadow:
-              selectedPersona === persona.id
-                ? `0px 0px 0px 4px ${persona.color}40` // Subtle glow for selected
-                : undefined,
+            borderRadius: '8px',
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: 'rgba(0, 0, 0, 0.12)', // Subtle border
+            },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: (theme) => theme.palette.primary.main,
+            },
+            backgroundColor: 'white',
           }}
         >
-          <CardActionArea
-            onClick={() => onSelectPersona(persona.id)}
-            sx={{ p: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
-          >
-            <Box
-              sx={{
-                backgroundColor: theme.palette.action.hover, // Light grey circle background
-                borderRadius: '50%',
-                width: 56,
-                height: 56,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                mb: 1,
-                '& .MuiSvgIcon-root': {
-                  fontSize: '2.5rem',
-                  color: persona.color,
-                },
-              }}
-            >
-              {persona.icon}
-            </Box>
-            <Typography variant="body1" sx={{ fontWeight: 500, color: theme.palette.text.primary }}>
-              {persona.name}
-            </Typography>
-          </CardActionArea>
-        </Card>
-      ))}
+          {datasetNames.map((name) => (
+            <MenuItem key={name} value={name}>
+              {name}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      {/* NEW: Info Button */}
+      <Tooltip title={`View context for ${selectedDataset}`}>
+        <IconButton
+          onClick={onOpenInfo}
+          sx={{
+            ml: 1,
+            color: (theme) => theme.palette.text.secondary,
+            '&:hover': {
+              color: (theme) => theme.palette.primary.main,
+            },
+          }}
+        >
+          <InfoIcon />
+        </IconButton>
+      </Tooltip>
+      {/* END NEW */}
     </Box>
   );
 };

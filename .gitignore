@@ -30,4 +30,4 @@ coverage.xml
 
 .cache/
 
-data/
+backend/data/
