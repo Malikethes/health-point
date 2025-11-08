@@ -121,7 +121,7 @@ const StatusPanel: React.FC<StatusPanelProps> = ({ summary, isLoading }) => {
         <StatusRow
         emoji="🧘"
           label="Stress Level"
-          subLabel="Avg. (1-10)"
+          subLabel="Avg. (1-100)"
           value={summary ? summary['stress'] : null}
           isLoading={isLoading}
         />

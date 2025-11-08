@@ -58,7 +58,7 @@ const transformApiData = (
   let unit = '';
   if (id === 'heart-rate') unit = 'bpm';
   else if (id === 'breathing-rate') unit = 'br/min';
-  else if (id === 'stress') unit = '(1-10)';
+  else if (id === 'stress') unit = '(1-100)';
   else if (id === 'temperature') unit = '°C';
   else if (id === 'pulse-transit-time') unit = 'ms';
   else if (id === 'activity') unit = 'g';
