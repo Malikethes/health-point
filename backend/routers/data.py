@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from services.pkl_loader import load_pkl, list_signals, extract_series
+from services.overall_data.heart_rate import get_heart_rate 
 
 router = APIRouter(prefix="/data", tags=["data"])
 
@@ -31,3 +32,16 @@ def get_series(
     except KeyError as e:
         raise HTTPException(status_code=400, detail=f"Invalid key: {e}")
     return chart
+
+@router.get("/heart_rate")
+def heart_rate(
+    subject: str = Query("S2", description="Subject ID, e.g. S2"),
+    sensor: str = Query("chest", description="ECG usually from chest sensor"),
+    modality: str = Query("ECG", description="Signal to derive heart rate from"),
+):
+    try:
+        return get_heart_rate(subject, sensor, modality)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Subject file not found: {subject}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error computing heart rate: {e}")
