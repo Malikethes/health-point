@@ -1,6 +1,6 @@
 import math, pickle, os
 from typing import Any, Dict, List, Optional
-
+import numpy as np
 LABEL_FS = 700
 LABEL_MAP = {
     0: "transient",
@@ -21,6 +21,7 @@ DEFAULT_FS = {
     "RESP": 700,
     "EMG": 700,
 }
+WRIST_ACC_DIVISOR = 64
 def load_pkl(path: str) -> Dict[str, Any]:
     if not os.path.exists(path):
         raise FileNotFoundError(path)
@@ -59,7 +60,7 @@ def list_signals(obj: Dict[str, Any]) -> Dict[str, Any]:
                 fs = None
             shape = None
             try:
-                import numpy as np
+
                 if hasattr(data, "shape"):
                     shape = tuple(int(x) for x in data.shape)
                 else:
@@ -103,7 +104,6 @@ def extract_series(
 
         # Convert data
         try:
-            import numpy as np
             arr = np.asarray(raw, dtype=float)
             if modality_u == "ACC" and arr.ndim == 2 and arr.shape[1] >= 3:
                 if axis and axis.lower() in ("x","y","z"):
@@ -111,23 +111,33 @@ def extract_series(
                     arr_use = arr[:, idx]
                 else:
                     arr_use = np.sqrt((arr[:,0]**2)+(arr[:,1]**2)+(arr[:,2]**2))
+                if sensor == "wrist":
+                    arr_use = arr_use / WRIST_ACC_DIVISOR
                 y_vals = arr_use.tolist()
                 axis_suffix = f" ({axis.lower() if axis else 'mag'})"
             else:
+                if modality_u == "ACC" and sensor == "wrist":
+                    arr = arr / WRIST_ACC_DIVISOR
                 y_vals = arr.tolist()
                 axis_suffix = ""
         except Exception:
-            # Fallback pure Python
             if modality_u == "ACC" and isinstance(raw, list) and raw and isinstance(raw[0], (list, tuple)):
                 if axis and axis.lower() in ("x","y","z"):
                     pos = {"x":0,"y":1,"z":2}[axis.lower()]
                     y_vals = [float(v[pos]) for v in raw]
+                    if sensor == "wrist":
+                        y_vals = [val / WRIST_ACC_DIVISOR for val in y_vals]
                     axis_suffix = f" ({axis.lower()})"
                 else:
-                    y_vals = [math.sqrt(v[0]**2+v[1]**2+v[2]**2) for v in raw]
+                    vals = [math.sqrt(v[0]**2+v[1]**2+v[2]**2) for v in raw]
+                    if sensor == "wrist":
+                        vals = [val / WRIST_ACC_DIVISOR for val in vals]
+                    y_vals = vals
                     axis_suffix = " (mag)"
             else:
                 y_vals = [float(v) for v in raw]
+                if modality_u == "ACC" and sensor == "wrist":
+                    y_vals = [val / WRIST_ACC_DIVISOR for val in y_vals]
                 axis_suffix = ""
         unit = _units(modality_u)
         y_label = f"{modality_u}{axis_suffix} [{unit}]"
