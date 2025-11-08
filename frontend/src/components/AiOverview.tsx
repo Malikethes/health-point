@@ -39,9 +39,9 @@ const AiOverview: React.FC<AiOverviewProps> = ({ sensorName, payload }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
           <CircularProgress
             size={16}
-            sx={{ mr: 1, color: theme.palette.primary.main }}
+            sx={{ mr: 1 }}
           />
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2">
             Asking our AI assistant for a simple explanation...
           </Typography>
         </Box>

@@ -217,7 +217,6 @@ const SensorModal: React.FC<SensorModalProps> = ({
                       <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
                         <FlashOnIcon
                           sx={{
-                            color: theme.palette.primary.main,
                             mr: 1.5,
                             fontSize: '1.5rem',
                           }}
@@ -227,7 +226,6 @@ const SensorModal: React.FC<SensorModalProps> = ({
                             variant="subtitle1"
                             sx={{
                               fontWeight: 600,
-                              color: theme.palette.primary.main,
                               mb: 0.5,
                             }}
                           >
