@@ -27,6 +27,11 @@ def compute_stress_level(eda, hr, temp, fs: float = 4.0, window_sec: float = 5.0
     
     stress_raw = cardio_stress + eda_stress + temp_stress + interaction
 
+    smooth_window = int(fs * 10)  # 10 second smoothing window
+    if smooth_window > 1:
+        kernel = np.ones(smooth_window) / smooth_window
+        stress_raw = np.convolve(stress_raw, kernel, mode='same')
+
     stress_index = 100 / (1 + np.exp(-stress_raw))
     stress_index = np.clip(stress_index, 0, 100)
 
@@ -38,6 +43,11 @@ def compute_stress_level(eda, hr, temp, fs: float = 4.0, window_sec: float = 5.0
         avg_stress = float(np.nanmean(window_stress))
         x_values.append((i / fs) + 5)  
         y_values.append(avg_stress)
+    
+    # Additional smoothing pass on final values for extra smoothness
+    if len(y_values) > 3:
+        y_smoothed = np.convolve(y_values, np.ones(3)/3, mode='same')
+        y_values = y_smoothed.tolist()
 
     return {
         "x_label": "Time (s)",
