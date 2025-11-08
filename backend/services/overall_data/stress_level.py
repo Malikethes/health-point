@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.stats import zscore
 from services.pkl_loader import load_pkl, extract_series
-from services.overall_data.heart_rate import get_heart_rate
 
 def compute_stress_level(eda, hr, temp, fs: float = 4.0, window_sec: float = 5.0):
     # Z-score normalization [0 - average]
@@ -20,7 +19,7 @@ def compute_stress_level(eda, hr, temp, fs: float = 4.0, window_sec: float = 5.0
     for i in range(0, len(stress_index) - window, window):
         window_stress = stress_index[i:i + window]
         avg_stress = float(np.nanmean(window_stress))
-        x_values.append(i / fs)
+        x_values.append((i / fs) + 5)  
         y_values.append(avg_stress)
 
     return {
@@ -37,11 +36,12 @@ def get_stress_level(subject: str, sensor: str = "wrist"):
 
     eda_data = extract_series(obj, sensor=sensor, modality="EDA")
     temp_data = extract_series(obj, sensor=sensor, modality="TEMP")
-    hr_data = get_heart_rate(subject, sensor="chest", modality="ECG")
     
-    eda_series = eda_data["y_values"]
-    temp_series = temp_data["y_values"]
-    hr_series = hr_data["y_values"]
+    ecg_data = extract_series(obj, sensor="chest", modality="ECG")
+    
+    eda_series = np.array(eda_data["y_values"])
+    temp_series = np.array(temp_data["y_values"])
+    ecg_series = np.array(ecg_data["y_values"])
 
     payload = obj["signal"][sensor]["EDA"]
     if isinstance(payload, dict):
@@ -49,11 +49,12 @@ def get_stress_level(subject: str, sensor: str = "wrist"):
     else:
         fs = 4.0
 
-    min_len = min(len(eda_series), len(hr_series), len(temp_series))
-    eda_series, hr_series, temp_series = (
-        np.array(eda_series[:min_len]),
-        np.array(hr_series[:min_len]),
-        np.array(temp_series[:min_len]),
-    )
+    downsample_factor = int(700 / 4)
+    ecg_downsampled = ecg_series[::downsample_factor]
+    
+    min_len = min(len(eda_series), len(ecg_downsampled), len(temp_series))
+    eda_series = eda_series[:min_len]
+    ecg_series = ecg_downsampled[:min_len]
+    temp_series = temp_series[:min_len]
 
-    return compute_stress_level(eda_series, hr_series, temp_series, fs=fs)
+    return compute_stress_level(eda_series, ecg_series, temp_series, fs=fs)
